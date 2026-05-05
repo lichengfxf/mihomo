@@ -1,0 +1,23 @@
+# 最简 tproxy 验证配置
+# 所有入站流量走 tproxy，代理策略为 DIRECT 直连
+
+mixed-port: 7890
+
+log-level: info
+mode: direct
+
+tproxy-port: 7893
+
+iptables:
+  enable: true
+  inbound-interface: ens33    # 改为你的出口网卡名
+  bypass: []                 # 需要绕过的网段，留空则使用默认局域网段
+  dns-redirect: true         # 劫持 DNS 到 mihomo 的 DNS 端口
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  nameserver:
+    - 8.8.8.8
+    - 1.1.1.1
