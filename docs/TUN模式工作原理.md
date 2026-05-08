@@ -318,3 +318,365 @@ rules:
 TUN 模式把流量导入 mihomo 的方式是：
 
 通过虚拟网卡和系统路由，让内核把 IP 包交给 mihomo，而不是通过普通代理端口或域名级 iptables 规则把流量塞进进程。
+
+## 14. 能否指定哪些流量进入 TUN
+
+可以。
+
+当前仓库里的 `tun` 配置支持对“哪些流量被导入 TUN”做单独控制。相关字段定义在：
+
+- [config/config.go](/vm/project/github/clash-meta/mihomo/config/config.go:267)
+- [listener/config/tun.go](/vm/project/github/clash-meta/mihomo/listener/config/tun.go:12)
+
+可用控制项包括：
+
+- `route-address`
+- `route-exclude-address`
+- `route-address-set`
+- `route-exclude-address-set`
+- `include-interface`
+- `exclude-interface`
+- `include-uid`
+- `exclude-uid`
+- `exclude-src-port`
+- `exclude-dst-port`
+- Android/mac 相关过滤项
+
+这些配置控制的是：
+
+- 哪些流量被路由到 TUN 网卡
+- 哪些流量绕过 TUN，直接由系统原路径处理
+
+需要注意的是，这一层是“导流层”，不是 `rules` 那一层。
+
+也就是说：
+
+- 先决定流量是否进入 TUN
+- 再决定进入 mihomo 以后是 `DIRECT` 还是走某个代理节点
+
+## 15. TUN 导流是否支持按域名控制
+
+不能像 `rules` 一样直接按域名控制。
+
+TUN 导流本质上依赖路由和过滤条件，所以更适合按这些维度控制：
+
+- 目标 IP / 网段
+- 接口
+- UID
+- 端口
+- MAC 地址
+
+例如：
+
+- `192.168.100.0/24` 可以直接指定是否进入 TUN
+- `192.168.100.20/32` 可以直接排除
+- 某个 Linux 用户发出的流量可以直接排除
+- 某个目标端口的流量可以直接排除
+
+但 `baidu.com` 这种域名不能在 TUN 导流阶段直接匹配。
+
+如果要实现“只让 baidu 相关流量进 TUN”，通常只能选择两种思路：
+
+1. 让较大范围流量先进 TUN，再由 `rules` 决定只有 `baidu.com` 走代理
+2. 在系统层先把 `baidu.com` 解析成 IP 集，再用手工路由或防火墙规则把这些 IP 导入 TUN
+
+第二种方案的本质仍然是“按 IP 导流”，不是“运行时按域名导流”。
+
+## 16. 路由如何决定哪些流量进入 TUN
+
+TUN 的导流关键点不在应用，而在系统路由。
+
+当启用 TUN 后，内核会根据路由规则决定：
+
+- 哪些包要发往真实物理网卡
+- 哪些包要发往 TUN 虚拟网卡
+
+只有被路由到 TUN 的流量，mihomo 才能看到。
+
+相关配置最终会进入：
+
+- [listener/sing_tun/server.go](/vm/project/github/clash-meta/mihomo/listener/sing_tun/server.go:395)
+
+其中包括：
+
+- `Inet4RouteAddress`
+- `Inet6RouteAddress`
+- `Inet4RouteExcludeAddress`
+- `Inet6RouteExcludeAddress`
+- `IncludeInterface`
+- `ExcludeInterface`
+- `IncludeUID`
+- `ExcludeUID`
+- `ExcludeSrcPort`
+- `ExcludeDstPort`
+
+这说明在当前实现里，TUN 入口的导流范围本身就是可配置的。
+
+## 17. `route-address` 和 `route-exclude-address`
+
+这是最常用的一组导流控制项。
+
+### `route-address`
+
+表示“哪些目标网段应该被路由到 TUN”。
+
+例如：
+
+```yaml
+tun:
+  enable: true
+  auto-route: true
+  route-address:
+    - 192.168.100.0/24
+```
+
+含义是：
+
+- 只有发往 `192.168.100.0/24` 的流量会被导入 TUN
+
+再例如：
+
+```yaml
+tun:
+  enable: true
+  auto-route: true
+  route-address:
+    - 0.0.0.0/1
+    - 128.0.0.0/1
+```
+
+这是一个常见写法，表示：
+
+- 用两个半区覆盖大部分 IPv4 默认路由
+
+### `route-exclude-address`
+
+表示“即使大范围流量进 TUN，这些目标仍然要绕过 TUN”。
+
+例如：
+
+```yaml
+tun:
+  enable: true
+  auto-route: true
+  route-address:
+    - 0.0.0.0/0
+  route-exclude-address:
+    - 192.168.100.20/32
+```
+
+含义是：
+
+- 默认所有 IPv4 流量进入 TUN
+- 但发往 `192.168.100.20` 的流量不进入 TUN
+
+## 18. `route-address-set` 和 `route-exclude-address-set`
+
+这是基于规则集控制导流范围的方式，但本质仍然是基于目标 IP CIDR。
+
+文档示例在：
+
+- [docs/config.yaml](/vm/project/github/clash-meta/mihomo/docs/config.yaml:139)
+
+注释已经说明其适用条件：
+
+- 仅支持 Linux
+- 需要 `nftables`
+- 需要启用 `auto-route`
+- 需要启用 `auto-redirect`
+
+配置形态例如：
+
+```yaml
+tun:
+  enable: true
+  auto-route: true
+  auto-redirect: true
+  route-address-set:
+    - ruleset-1
+  route-exclude-address-set:
+    - ruleset-2
+```
+
+含义是：
+
+- 把 `ruleset-1` 中的目标 IP CIDR 加入导流范围
+- 把 `ruleset-2` 中的目标 IP CIDR 从导流范围中排除
+
+这不是直接按域名工作，而是把规则集里的 CIDR 下沉到导流层。
+
+## 19. 接口、UID、端口级别的导流控制
+
+当前实现还支持从这些维度控制是否进入 TUN：
+
+- 接口：`include-interface` / `exclude-interface`
+- 用户：`include-uid` / `exclude-uid`
+- 端口：`exclude-src-port` / `exclude-dst-port`
+
+示例：
+
+```yaml
+tun:
+  enable: true
+  auto-route: true
+  route-address:
+    - 0.0.0.0/0
+  exclude-interface:
+    - docker0
+  exclude-uid:
+    - 0
+  exclude-dst-port:
+    - 22
+```
+
+含义是：
+
+- 默认所有 IPv4 流量进入 TUN
+- 但和 `docker0` 接口相关的流量不导入
+- root 用户发起的流量不导入
+- 目标端口是 `22` 的流量不导入
+
+这类配置在需要保护 SSH、容器网络、系统服务时很有用。
+
+## 20. 自动路由和手动路由的区别
+
+### 自动路由
+
+对应：
+
+```yaml
+tun:
+  auto-route: true
+```
+
+含义是由 `sing-tun` 自动创建并维护策略路由，把匹配流量送入 TUN。
+
+优点：
+
+- 配置简单
+- 不需要手工维护 `ip rule` / `ip route`
+- 适合大多数单机使用场景
+
+缺点：
+
+- 可见性不如手工配置直观
+- 调试时需要额外查看系统下发的实际路由
+
+### 手动路由
+
+对应思路是：
+
+- `tun.enable: true`
+- `auto-route: false`
+- 由用户自己手工配置系统路由和策略路由
+
+例如自己维护：
+
+- `ip rule`
+- `ip route`
+- 更复杂的策略路由表
+- 外部 `nftables` / `iptables` 配套逻辑
+
+优点：
+
+- 完全可控
+- 适合网关、旁路由、多出口、容器网络等复杂场景
+
+缺点：
+
+- 配置复杂
+- 更容易出现环路、漏流量、优先级错误
+
+## 21. `auto-route` 与 `auto-redirect` 的区别
+
+这两个选项容易混淆，但作用不同。
+
+### `auto-route`
+
+负责：
+
+- 自动配置路由
+- 决定哪些流量被送入 TUN
+
+### `auto-redirect`
+
+负责：
+
+- 自动配置额外的重定向规则
+- 主要用于 Linux 下更复杂的透明导流场景
+
+当前实现明确要求：
+
+- 启用 `auto-redirect` 时，必须先启用 `auto-route`
+
+相关代码：
+
+- [listener/sing_tun/server.go](/vm/project/github/clash-meta/mihomo/listener/sing_tun/server.go:421)
+
+文档注释则说明：
+
+- `auto-redirect` 主要用于 Linux
+- 在路由器场景下通常更有价值
+
+参考：
+
+- [docs/config.yaml](/vm/project/github/clash-meta/mihomo/docs/config.yaml:137)
+
+## 22. 实际配置建议
+
+### 场景一：只让某个网段进入 TUN
+
+```yaml
+tun:
+  enable: true
+  auto-route: true
+  route-address:
+    - 192.168.100.0/24
+```
+
+### 场景二：默认都进入 TUN，但排除某个地址
+
+```yaml
+tun:
+  enable: true
+  auto-route: true
+  route-address:
+    - 0.0.0.0/0
+  route-exclude-address:
+    - 192.168.100.20/32
+```
+
+### 场景三：默认都进入 TUN，但保护 SSH 和容器网络
+
+```yaml
+tun:
+  enable: true
+  auto-route: true
+  route-address:
+    - 0.0.0.0/0
+  exclude-interface:
+    - docker0
+  exclude-dst-port:
+    - 22
+```
+
+### 场景四：只想让 `baidu.com` 走代理
+
+推荐做法不是“只让 baidu 进入 TUN”，而是：
+
+1. 让足够范围的流量进入 TUN
+2. 再用 `rules` 控制只有 `baidu.com` 走代理
+
+例如：
+
+```yaml
+tun:
+  enable: true
+  auto-route: true
+
+rules:
+  - DOMAIN-SUFFIX,baidu.com,socks5-proxy
+  - MATCH,DIRECT
+```
+
+这样更符合 mihomo 当前实现能力，也更容易维护。
