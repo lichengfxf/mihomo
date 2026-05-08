@@ -680,3 +680,45 @@ rules:
 ```
 
 这样更符合 mihomo 当前实现能力，也更容易维护。
+
+## 23. 局域网 `/32` 主机路由的特殊处理
+
+对于同网段局域网目标，单靠：
+
+```yaml
+tun:
+  auto-route: true
+  route-address:
+    - 192.168.100.235/32
+```
+
+在很多 Linux 环境里仍然可能被现有的局域网直连路由抢走。
+
+原因是内核通常已经有类似这样的直连路由：
+
+```text
+192.168.100.0/24 dev ens33 scope link
+```
+
+于是访问 `192.168.100.235` 时，流量会优先从物理网卡直接出去，而不是进入 TUN。
+
+当前仓库已经补了第一版修复：
+
+- Linux 下
+- `tun.auto-route: true`
+- `route-address` 中包含 IPv4 `/32`
+
+时，mihomo 会在 TUN 启动成功后自动补一条等价于下面的主机路由：
+
+```bash
+ip route replace 192.168.100.235/32 dev Meta
+```
+
+关闭 TUN 时则会尝试删除这条主机路由。
+
+对应实现位于：
+
+- [listener/sing_tun/server.go](/vm/project/github/clash-meta/mihomo/listener/sing_tun/server.go:506)
+- [listener/sing_tun/server.go](/vm/project/github/clash-meta/mihomo/listener/sing_tun/server.go:665)
+
+因此，对于“只把某个同网段 LAN 主机导入 TUN”的场景，当前仓库已经具备基础支持，不再要求用户手工执行 `ip route add ... dev Meta`。

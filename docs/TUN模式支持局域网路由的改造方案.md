@@ -9,7 +9,28 @@
 
 这说明当前实现对“同网段局域网主机路由导入 TUN”的支持不完整。
 
-本文只写问题分析和代码改造方案，不直接修改代码。
+本文记录问题分析、方案设计，以及当前仓库已经落地的第一版实现。
+
+## 当前状态
+
+当前仓库已经按方案 A 落地了第一版实现：
+
+- Linux 下
+- `tun.auto-route: true`
+- `route-address` 中包含 IPv4 `/32`
+
+时，mihomo 会在 TUN 启动成功后自动补等价于下面的主机路由：
+
+```bash
+ip route replace <dst>/32 dev <tunName>
+```
+
+在 TUN 关闭时会尝试删除对应主机路由。
+
+当前实现代码位于：
+
+- [listener/sing_tun/server.go](/vm/project/github/clash-meta/mihomo/listener/sing_tun/server.go:506)
+- [listener/sing_tun/server.go](/vm/project/github/clash-meta/mihomo/listener/sing_tun/server.go:665)
 
 ## 1. 问题现象
 
@@ -449,11 +470,11 @@ ip route add 192.168.100.235 dev Meta
 
 能够直接修复问题。
 
-因此，最小且务实的代码改造方向是：
+第一版已经按这个方向实现：
 
 - 在 Linux 下
 - 当 `auto-route` 启用
 - 且 `route-address` 中包含 IPv4 `/32` 主机目标时
 - 由 mihomo 自动补一条 `ip route replace <dst>/32 dev <tunName>`
 
-推荐先按这个方向做第一版实现，再决定是否增加显式配置项做更细粒度控制。
+后续是否继续增加显式配置项，取决于是否需要把这个行为开放成可选能力，而不是默认对所有 `/32` 自动生效。
