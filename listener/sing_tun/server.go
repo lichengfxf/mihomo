@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/metacubex/mihomo/adapter/inbound"
+	"github.com/metacubex/mihomo/common/cmd"
 	"github.com/metacubex/mihomo/component/dialer"
 	"github.com/metacubex/mihomo/component/iface"
 	"github.com/metacubex/mihomo/component/resolver"
@@ -63,6 +64,7 @@ type Listener struct {
 	routeExcludeAddressMap   map[string]*netipx.IPSet
 	routeAddressSet          []*netipx.IPSet
 	routeExcludeAddressSet   []*netipx.IPSet
+	extraRoutePrefixes       []netip.Prefix
 
 	dnsServerIp []string
 }
@@ -504,6 +506,11 @@ func New(options LC.Tun, tunnel C.Tunnel, additions ...inbound.Addition) (l *Lis
 	}
 	l.tunStack = tunStack
 
+	err = l.setupExtraHostRoutes(inet4RouteAddress)
+	if err != nil {
+		return
+	}
+
 	if l.autoRedirect != nil {
 		if len(l.options.RouteAddressSet) > 0 && len(l.routeAddressSet) == 0 {
 			l.routeAddressSet = emptyAddressSet // without this we can't call UpdateRouteAddressSet after Start
@@ -658,6 +665,43 @@ func parseRange[T constraints.Integer](uidRanges []ranges.Range[T], rangeList []
 	return uidRanges, nil
 }
 
+func (l *Listener) setupExtraHostRoutes(routePrefixes []netip.Prefix) error {
+	if runtime.GOOS != "linux" || !l.options.AutoRoute {
+		return nil
+	}
+
+	for _, prefix := range routePrefixes {
+		if !prefix.Addr().Is4() || prefix.Bits() != 32 {
+			continue
+		}
+
+		cmdStr := fmt.Sprintf("ip route replace %s dev %s", prefix, l.tunName)
+		if _, err := cmd.ExecCmd(cmdStr); err != nil {
+			return E.Cause(err, "setup extra host route: "+prefix.String())
+		}
+
+		log.Infoln("[TUN] Added extra host route %s via %s", prefix, l.tunName)
+		l.extraRoutePrefixes = append(l.extraRoutePrefixes, prefix)
+	}
+
+	return nil
+}
+
+func (l *Listener) cleanupExtraHostRoutes() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+
+	for _, prefix := range l.extraRoutePrefixes {
+		cmdStr := fmt.Sprintf("ip route del %s dev %s", prefix, l.tunName)
+		if _, err := cmd.ExecCmd(cmdStr); err != nil {
+			log.Warnln("[TUN] Cleanup extra host route %s via %s failed: %v", prefix, l.tunName, err)
+			continue
+		}
+		log.Infoln("[TUN] Removed extra host route %s via %s", prefix, l.tunName)
+	}
+}
+
 func (l *Listener) Close() error {
 	l.closed = true
 	resolver.RemoveSystemDnsBlacklist(l.dnsServerIp...)
@@ -667,6 +711,7 @@ func (l *Listener) Close() error {
 	if l.cDialerInterfaceFinder != nil {
 		dialer.DefaultInterfaceFinder.CompareAndSwap(l.cDialerInterfaceFinder, nil)
 	}
+	l.cleanupExtraHostRoutes()
 	return common.Close(
 		l.ruleUpdateCallbackCloser,
 		l.tunStack,
