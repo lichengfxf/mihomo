@@ -1,5 +1,5 @@
 # 最简 tun 验证配置
-# 仅 baidu.com 走 socks5-proxy，其余流量直连
+# 仅 192.168.100.235 进入 TUN 并走 socks5-proxy，其余流量直连
 
 mixed-port: 7890
 
@@ -13,11 +13,13 @@ tun:
     - 0.0.0.0:53
   auto-route: true
   auto-detect-interface: true
+  route-address:
+    - 192.168.100.235/32
 
 dns:
   enable: true
   listen: 0.0.0.0:1053
-  enhanced-mode: fake-ip
+  enhanced-mode: redir-host
   nameserver:
     - 8.8.8.8
     - 1.1.1.1
@@ -29,5 +31,5 @@ proxies:
     port: 8899
 
 rules:
-  - DOMAIN-SUFFIX,baidu.com,socks5-proxy
+  - IP-CIDR,192.168.100.235/32,socks5-proxy,no-resolve
   - MATCH,DIRECT
