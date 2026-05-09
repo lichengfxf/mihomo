@@ -52,7 +52,7 @@ Build mihomo:
 ```shell
 git clone https://github.com/MetaCubeX/mihomo.git
 cd mihomo && go mod download
-go build
+go build -o sdc-mihomo
 ```
 
 Set go proxy if a connection to GitHub is not possible:
