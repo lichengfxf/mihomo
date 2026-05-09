@@ -60,7 +60,7 @@
 - 第一版只支持 `encrypt: 0`
 - 第一版不支持 `WebSocket`
 - 第一版不支持 `UDP`
-- `auth` 为必填配置
+- `key-data` 为必填配置
 - `policy-id` 默认值为 `*`，同时允许显式配置
 - `instance-id` 允许省略；省略时默认使用 `mihomo`
 - `client-addr` / `instance-path` / `ip-path` 第一版只做最小自动填充
@@ -179,7 +179,10 @@ SVNT 校验：
 
 这意味着 mihomo 的 `svnt` 出站配置必须至少提供：
 
-- `auth`
+- `key-data`
+
+`key-data` 的语义不是“把一个现成的 `Auth` 字符串直接填进配置”，而是和 SVNT 自身保持一致：  
+mihomo 侧根据 `KeyData` 直接参考 [/vm/project/gitcnsind/SVNT/src/svnt/crypto/crypto.go](/vm/project/gitcnsind/SVNT/src/svnt/crypto/crypto.go) 中 `CryptoEnvInitWithData(...)` 的逻辑生成本地 `crypto.Auth`，再把生成结果写入握手消息的 `Auth` 字段。
 
 否则服务端会直接报：
 
@@ -219,7 +222,7 @@ proxies:
     type: svnt
     server: 192.168.100.10
     port: 9000
-    auth: your-auth-string
+    key-data: your-key-data
     policy-id: "*"
     encrypt: 0
     instance-id: mihomo
@@ -234,7 +237,7 @@ proxies:
 | `type` | 是 | 固定 `svnt` |
 | `server` | 是 | SVNT 服务端地址 |
 | `port` | 是 | SVNT 服务端端口 |
-| `auth` | 是 | 对应 `MSG.Auth` |
+| `key-data` | 是 | 本地密钥数据；直接参考 `svnt/crypto/crypto.go` 的逻辑推导出 `MSG.Auth` |
 | `policy-id` | 是 | 对应 `MSG.PolicyID`，默认 `*` |
 | `encrypt` | 是 | 第一版固定只支持 `0` |
 | `instance-id` | 建议 | 对应 `MSG.InstanceID` |
@@ -311,7 +314,7 @@ type SvntOption struct {
     Name       string `proxy:"name"`
     Server     string `proxy:"server"`
     Port       int    `proxy:"port"`
-    Auth       string `proxy:"auth"`
+    KeyData    string `proxy:"key-data"`
     PolicyID   string `proxy:"policy-id,omitempty"`
     Encrypt    int    `proxy:"encrypt,omitempty"`
     InstanceID string `proxy:"instance-id,omitempty"`
@@ -323,7 +326,7 @@ type SvntOption struct {
 
 - `Network` 默认 `tcp`
 - 第一版仅允许 `tcp`
-- `Auth` 不能为空
+- `KeyData` 不能为空
 - 第一版 `Encrypt` 固定为 `0`
 
 ## 6.5 `Svnt` 结构体设计
@@ -353,6 +356,16 @@ type Svnt struct {
 8. 检查响应 `Status == OK`
 9. 如果响应中的 `Encrypt != 0`，直接返回不兼容错误
 10. 返回 `NewConn(c, s)`
+
+其中第 2 步之前，需要先用 `KeyData` 直接参考 `svnt/crypto/crypto.go` 中 `CryptoEnvInitWithData(...)` 的逻辑生成本地 `Auth`：
+
+1. 直接把密钥字节作为 AES key
+2. 用密钥字节的 MD5 前 16 字节生成 IV
+3. 使用 `AES-CBC` 加密固定明文 `SVNTMSGAUTH12345`
+4. 对密文做 Base64 编码
+5. 把结果填入握手消息 `Auth`
+
+这里应尽量按源码一比一实现，不自行抽象成“语义等价”的变体，避免和现网 SVNT 服务端出现细微不兼容。
 
 这和现有出站协议的结构是一致的：
 
@@ -414,6 +427,12 @@ SVNT 源码里用的是：
 1. `crypto.Auth` 与加密密钥是否同源
 2. `Block` / `IV` 如何协商或静态生成
 3. 服务端是否只靠配置即可推导出相同密钥
+
+就目前掌握的信息，第一版已经可以按 SVNT 现有实现直接落地：
+
+- 直接参考 `svnt/crypto/crypto.go`，从 `key-data` 推导 `Auth`
+- `encrypt: 0` 时仍然执行 `Auth` 一致性校验
+- 不需要把 `Auth` 暴露成用户单独填写的配置项
 
 当前已经定稿，第一版只支持：
 
@@ -522,7 +541,7 @@ SVNT 支持底层 WebSocket，这在协议说明里已经写明。
 在真正开始编码前，建议先确认这些点：
 
 1. `crypto.Auth` 的来源和配置方式  
-   需要知道 `auth` 是固定字符串、口令派生值，还是运行时生成
+   当前已经明确：应由 `key-data` 直接参考 `svnt/crypto/crypto.go` 中的实现生成，而不是让用户直接填写 `auth`
 
 2. `encrypt=1` 时密钥和 IV 如何得到  
    这是是否能做加密版的核心
