@@ -12,7 +12,7 @@
 
 - 仅 `TCP`
 - 仅 `MSG_TYPE_TUNNEL`
-- 仅 `encrypt: 0`
+- `encrypt` 支持 `0/1/2`
 - `key-data` 必填，并按 `svnt/crypto/crypto.go` 推导 `Auth`
 - `policy-id` 默认 `*`
 - `instance-id` 默认 `mihomo`
@@ -51,8 +51,8 @@
 
 - TCP 承载
 - `MSG_TYPE_TUNNEL` 建连
-- `Encrypt = 0`
-- 建连成功后纯透明 TCP 转发
+- `Encrypt = 0/1/2`
+- 建连成功后按服务端返回值决定是否切到加密 TCP 转发
 
 也就是说，先把它做成一个“像 SOCKS5 一样的单连接出站协议”。
 
@@ -74,7 +74,7 @@
 
 - 第一版只做 `TCP`
 - 第一版只做 `MSG_TYPE_TUNNEL`
-- 第一版只支持 `encrypt: 0`
+- 第一版支持 `encrypt: 0/1/2`
 - 第一版不支持 `WebSocket`
 - 第一版不支持 `UDP`
 - `key-data` 为必填配置
@@ -241,7 +241,7 @@ proxies:
     port: 9000
     key-data: your-key-data
     policy-id: "*"
-    encrypt: 0
+    encrypt: 2
     instance-id: mihomo
     network: tcp
 ```
@@ -256,7 +256,7 @@ proxies:
 | `port` | 是 | SVNT 服务端端口 |
 | `key-data` | 是 | 本地密钥数据；直接参考 `svnt/crypto/crypto.go` 的逻辑推导出 `MSG.Auth` |
 | `policy-id` | 是 | 对应 `MSG.PolicyID`，默认 `*` |
-| `encrypt` | 是 | 第一版固定只支持 `0` |
+| `encrypt` | 是 | `0=明文`、`1=强制加密`、`2=按服务端策略协商` |
 | `instance-id` | 建议 | 对应 `MSG.InstanceID` |
 | `network` | 建议 | 第一版固定只接受 `tcp` |
 | `client-addr` | 可选 | 不填则由 mihomo 自动推导或留空 |
@@ -435,27 +435,14 @@ SVNT 源码里用的是：
 
 - [/vm/project/gitcnsind/SVNT/src/svnt/Socket/CryptoConn.go](/vm/project/gitcnsind/SVNT/src/svnt/Socket/CryptoConn.go)
 
-但这里有一个关键不确定点：
-
-**仅从你给的协议说明里，还不能完整确定 mihomo 侧如何安全生成与服务器一致的 `crypto.Block` 和 `crypto.IV`。**
-
-也就是说，第一版实现前必须进一步确认：
-
-1. `crypto.Auth` 与加密密钥是否同源
-2. `Block` / `IV` 如何协商或静态生成
-3. 服务端是否只靠配置即可推导出相同密钥
-
-就目前掌握的信息，第一版已经可以按 SVNT 现有实现直接落地：
+根据补充的加密实现说明，mihomo 侧已经可以和 SVNT 现有实现对齐：
 
 - 直接参考 `svnt/crypto/crypto.go`，从 `key-data` 推导 `Auth`
-- `encrypt: 0` 时仍然执行 `Auth` 一致性校验
+- 同时用同一份 `key-data` 初始化 `AES Block` 与 `IV`
+- 当服务端回包 `Encrypt = 1` 时，用 `cipher.NewCFBEncrypter` / `cipher.NewCFBDecrypter` 包装 `net.Conn`
 - 不需要把 `Auth` 暴露成用户单独填写的配置项
 
-当前已经定稿，第一版只支持：
-
-- `encrypt: 0`
-
-并把 `encrypt: 1` 明确留到第二阶段。
+当前实现仍然只覆盖 `TCP + MSG_TYPE_TUNNEL`，但数据面已经支持 `encrypt: 1` 的加密通讯。
 
 ## 7. UDP 支持建议暂缓
 
@@ -506,13 +493,13 @@ SVNT 支持底层 WebSocket，这在协议说明里已经写明。
 
 ## 9. 分阶段实施计划
 
-## 阶段一：TCP + 明文
+## 阶段一：TCP + 基础握手
 
 目标：
 
 - 支持 `type: svnt`
 - 支持 TCP 承载
-- `encrypt: 0`
+- `encrypt: 0/1/2`
 - `MSG_TYPE_TUNNEL`
 - 建连成功后透传 TCP
 
@@ -525,16 +512,12 @@ SVNT 支持底层 WebSocket，这在协议说明里已经写明。
 
 这是已经定稿并立即执行的第一步。
 
-## 阶段二：补 `encrypt: 1`
-
-前提：
-
-- 先确认 SVNT 的密钥派生和 IV 规则
+## 阶段二：补数据流加密
 
 改动：
 
 - 增加 `svnt_crypto.go`
-- 实现 `net.Conn` 包装
+- 实现 `net.Conn` 的 AES-CFB 包装
 
 ## 阶段三：支持 WebSocket
 
@@ -560,8 +543,8 @@ SVNT 支持底层 WebSocket，这在协议说明里已经写明。
 1. `crypto.Auth` 的来源和配置方式  
    当前已经明确：应由 `key-data` 直接参考 `svnt/crypto/crypto.go` 中的实现生成，而不是让用户直接填写 `auth`
 
-2. `encrypt=1` 时密钥和 IV 如何得到  
-   这是是否能做加密版的核心
+2. `encrypt=1/2` 在你的目标服务端上是如何配置策略的  
+   mihomo 当前实现会按回包 `Encrypt` 切换数据面，但仍需要服务端策略和 `policy-id` 对齐
 
 3. WebSocket 模式下的 URL / path / host 规则  
    文档只说底层可用 WS，但没有给出握手路径细节
@@ -572,7 +555,7 @@ SVNT 支持底层 WebSocket，这在协议说明里已经写明。
 5. 是否必须带 `PolicyID`，以及默认值能否用 `*`
 
 其中最关键的是第 2 条。  
-它会阻塞第二阶段 `encrypt: 1`，但不阻塞当前第一版。
+它不再阻塞代码实现，但会直接影响现网是否能协商成功。
 
 ## 11. 最终建议
 
@@ -587,7 +570,7 @@ SVNT 支持底层 WebSocket，这在协议说明里已经写明。
 
 如果你准备继续推进实现，我建议下一步按这个范围落代码：
 
-1. 先只做 `encrypt: 0`
+1. 先只做 `encrypt: 0/1/2` 的 TCP 数据面
 2. 先只做 `network: tcp`
 3. 先只做 `DialContext()`
 4. 暂不做 UDP

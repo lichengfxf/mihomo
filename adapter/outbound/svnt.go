@@ -16,7 +16,7 @@ import (
 type Svnt struct {
 	*Base
 	option   *SvntOption
-	auth     string
+	crypto   *svntCryptoEnv
 	instance string
 	policyID string
 	encrypt  int
@@ -53,11 +53,11 @@ func NewSvnt(option SvntOption) (*Svnt, error) {
 	if network != "tcp" {
 		return nil, fmt.Errorf("svnt only supports tcp in this phase, got %q", network)
 	}
-	if option.Encrypt != 0 {
-		return nil, fmt.Errorf("svnt only supports encrypt=0 in this phase, got %d", option.Encrypt)
+	if option.Encrypt != 0 && option.Encrypt != 1 && option.Encrypt != 2 {
+		return nil, fmt.Errorf("svnt only supports encrypt=0/1/2, got %d", option.Encrypt)
 	}
 
-	auth, err := generateSVNTAuth(option.KeyData)
+	cryptoEnv, err := newSVNTCryptoEnv(option.KeyData)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func NewSvnt(option SvntOption) (*Svnt, error) {
 			Prefer:       option.IPVersion,
 		}),
 		option:   &option,
-		auth:     auth,
+		crypto:   cryptoEnv,
 		instance: instanceID,
 		policyID: policyID,
 		encrypt:  option.Encrypt,
@@ -128,7 +128,7 @@ func (s *Svnt) DialContext(ctx context.Context, metadata *C.Metadata) (_ C.Conn,
 	ipPath := []string{c.LocalAddr().String()}
 	rmsg, err := (&svntMsg{
 		Magic:        svntMagic,
-		Auth:         s.auth,
+		Auth:         s.crypto.auth,
 		InstanceID:   s.instance,
 		MsgType:      svntMsgTypeTunnel,
 		PolicyID:     s.policyID,
@@ -147,8 +147,11 @@ func (s *Svnt) DialContext(ctx context.Context, metadata *C.Metadata) (_ C.Conn,
 		}
 		return nil, fmt.Errorf("svnt tunnel failed with status %d", rmsg.Status)
 	}
-	if rmsg.Encrypt != 0 {
+	if rmsg.Encrypt != 0 && rmsg.Encrypt != 1 {
 		return nil, fmt.Errorf("svnt returned unsupported encrypt=%d", rmsg.Encrypt)
+	}
+	if rmsg.Encrypt == 1 {
+		c = s.crypto.wrapConn(c)
 	}
 
 	return NewConn(c, s), nil

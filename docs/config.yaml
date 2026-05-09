@@ -1277,7 +1277,7 @@ proxies: # socks5
     port: 9000
     key-data: your-key-data
     # policy-id: "*"
-    # encrypt: 0
+    # encrypt: 2 # 0=plain 1=encrypted 2=negotiate by server policy
     # instance-id: mihomo
     # network: tcp
     # tfo: false
