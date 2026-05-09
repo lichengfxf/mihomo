@@ -6,13 +6,22 @@ mixed-port: 7890
 log-level: info
 mode: rule
 
+tun:
+  enable: true
+  stack: system
+  auto-route: true
+  auto-detect-interface: true
+  dns-hijack:
+    - 0.0.0.0:53
+    - '[::]:53'
+
 proxies:
   - name: svnt-proxy
     type: svnt
-    server: 192.168.100.198
-    port: 9000
+    server: 192.168.198.200
+    port: 9823
     key-data: 9C60A285DD88CDFACA9C9EFA156653EF
-    # policy-id: "*"
+    policy-id: "DLPTunnel"
     # encrypt: 0
     # instance-id: mihomo
     # network: tcp
@@ -20,7 +29,7 @@ proxies:
 dns:
   enable: true
   listen: 0.0.0.0:1053
-  enhanced-mode: redir-host
+  enhanced-mode: fake-ip
   nameserver:
     - 8.8.8.8
     - 1.1.1.1
