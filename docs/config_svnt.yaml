@@ -22,7 +22,7 @@ proxies:
     port: 9823
     key-data: 9C60A285DD88CDFACA9C9EFA156653EF
     policy-id: "DLPTunnel"
-    # encrypt: 2 # 0=明文 1=强制加密 2=按服务端策略协商
+    encrypt: 2 # 0=明文 1=强制加密 2=按服务端策略协商
     # instance-id: mihomo
     # network: tcp
 
