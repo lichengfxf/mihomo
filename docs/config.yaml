@@ -1270,6 +1270,22 @@ proxies: # socks5
     # min-streams: 5 # Minimum multiplexed streams in a connection before opening a new connection. Conflict with max-streams.
     # max-streams: 0 # Maximum multiplexed streams in a connection before opening a new connection. Conflict with max-connections and min-streams.
 
+  # svnt
+  - name: svnt
+    type: svnt
+    server: 1.2.3.4
+    port: 9000
+    key-data: your-key-data
+    # policy-id: "*"
+    # encrypt: 0
+    # instance-id: mihomo
+    # network: tcp
+    # tfo: false
+    # mptcp: false
+    # interface-name: ""
+    # routing-mark: 0
+    # ip-version: dual
+
 # dns 出站会将请求劫持到内部 dns 模块，所有请求均在内部处理
   - name: "dns-out"
     type: dns

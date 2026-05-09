@@ -173,6 +173,13 @@ func ParseProxy(mapping map[string]any, options ...ProxyOption) (C.Proxy, error)
 			break
 		}
 		proxy, err = outbound.NewTrustTunnel(*trustTunnelOption)
+	case "svnt":
+		svntOption := &outbound.SvntOption{BasicOption: basicOption}
+		err = decoder.Decode(mapping, svntOption)
+		if err != nil {
+			break
+		}
+		proxy, err = outbound.NewSvnt(*svntOption)
 	default:
 		return nil, fmt.Errorf("unsupport proxy type: %s", proxyType)
 	}

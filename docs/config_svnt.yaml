@@ -1,0 +1,30 @@
+# 最简 svnt 验证配置
+# 仅 baidu.com 走 svnt，其余流量直连
+
+mixed-port: 7890
+
+log-level: info
+mode: rule
+
+proxies:
+  - name: svnt-proxy
+    type: svnt
+    server: 192.168.100.198
+    port: 9000
+    key-data: 9C60A285DD88CDFACA9C9EFA156653EF
+    # policy-id: "*"
+    # encrypt: 0
+    # instance-id: mihomo
+    # network: tcp
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: redir-host
+  nameserver:
+    - 8.8.8.8
+    - 1.1.1.1
+
+rules:
+  - DOMAIN-SUFFIX,baidu.com,svnt-proxy
+  - MATCH,DIRECT
