@@ -248,14 +248,14 @@ jobs:
         GOMIPS: ${{matrix.jobs.gomips}}
       run: |
         go env
-        go build -v -tags "with_gvisor" -trimpath -ldflags "${BUILDTAG} -X 'github.com/metacubex/mihomo/constant.Version=${VERSION}' -X 'github.com/metacubex/mihomo/constant.BuildTime=${BUILDTIME}' -w -s -buildid="
+        go build -v -tags "with_gvisor" -trimpath -o sdc-mihomo -ldflags "${BUILDTAG} -X 'github.com/metacubex/mihomo/constant.Version=${VERSION}' -X 'github.com/metacubex/mihomo/constant.BuildTime=${BUILDTIME}' -w -s -buildid="
         if [ "${{matrix.jobs.goos}}" = "windows" ]; then
-          cp mihomo.exe mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
-          zip -r mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.zip mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
+          cp sdc-mihomo.exe sdc-mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
+          zip -r sdc-mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.zip sdc-mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
         else
-          cp mihomo mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
-          gzip -c mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}} > mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.gz
-          rm mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
+          cp sdc-mihomo sdc-mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
+          gzip -c sdc-mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}} > sdc-mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.gz
+          rm sdc-mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
         fi
 
     - name: Package DEB
@@ -269,7 +269,7 @@ jobs:
           -v "${PackageVersion}" \
           -p "mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.deb" \
           --architecture ${{ matrix.jobs.debian }} \
-          mihomo=/usr/bin/mihomo
+          sdc-mihomo=/usr/bin/mihomo
 
     - name: Package RPM
       if: matrix.jobs.rpm != ''
@@ -282,7 +282,7 @@ jobs:
           -v "${PackageVersion}" \
           -p "mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.rpm" \
           --architecture ${{ matrix.jobs.rpm }} \
-          mihomo=/usr/bin/mihomo
+          sdc-mihomo=/usr/bin/mihomo
 
     - name: Package Pacman
       if: matrix.jobs.pacman != ''
@@ -296,7 +296,7 @@ jobs:
           -v "${PackageVersion}" \
           -p "mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.pkg.tar.zst" \
           --architecture ${{ matrix.jobs.pacman }} \
-          mihomo=/usr/bin/mihomo
+          sdc-mihomo=/usr/bin/mihomo
 
     - name: Pack Golang Toolchain
       if: ${{ matrix.jobs.goversion == '' && matrix.jobs.tarball == 'tarball' }}
@@ -323,11 +323,11 @@ jobs:
       with:
         name: "${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}"
         path: |
-          mihomo*.gz
+          sdc-mihomo*.gz
           mihomo*.deb
           mihomo*.rpm
           mihomo*.pkg.tar.zst
-          mihomo*.zip
+          sdc-mihomo*.zip
           toolchain.tar.gz
           vendor.tar.gz
           version.txt
