@@ -10,11 +10,6 @@ TARGETS=(
   "linux-arm64"
 )
 
-ARTIFACTS=(
-  "sdc-mihomo-linux-amd64"
-  "sdc-mihomo-linux-arm64"
-)
-
 cd "$ROOT_DIR"
 
 mkdir -p "$DEST_DIR"
@@ -23,8 +18,12 @@ for target in "${TARGETS[@]}"; do
   make "$target"
 done
 
-for artifact in "${ARTIFACTS[@]}"; do
-  install -m 0755 "$ROOT_DIR/bin/$artifact" "$DEST_DIR/$artifact"
-done
+install -m 0755 \
+  "$ROOT_DIR/bin/sdc-mihomo-linux-amd64" \
+  "$DEST_DIR/sdc-mihomo-linux-x86_64"
+
+install -m 0755 \
+  "$ROOT_DIR/bin/sdc-mihomo-linux-arm64" \
+  "$DEST_DIR/sdc-mihomo-linux-aarch64"
 
 printf 'Copied artifacts to %s\n' "$DEST_DIR"
