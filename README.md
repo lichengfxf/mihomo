@@ -21,7 +21,7 @@
 ## Features
 
 - Local HTTP/HTTPS/SOCKS server with authentication support
-- VMess, VLESS, Shadowsocks, Trojan, Snell, TUIC, Hysteria protocol support
+- VMess, VLESS, Shadowsocks, Trojan, Snell, TUIC, Hysteria, SVNT protocol support
 - Built-in DNS server that aims to minimize DNS pollution attack impact, supports DoH/DoT upstream and fake IP.
 - Rules based off domains, GEOIP, IPCIDR or Process to forward packets to different nodes
 - Remote groups allow users to implement powerful rules. Supports automatic fallback, load balancing or auto select node

@@ -2,6 +2,23 @@
 
 本文说明如何在 mihomo 中新增一个上游出站协议 `svnt`，用于连接支持 SVNT 协议的上游服务器。
 
+当前仓库已经落地第一版实现，代码入口如下：
+
+- [adapter/outbound/svnt.go](/vm/project/github/clash-meta/mihomo/adapter/outbound/svnt.go)
+- [adapter/outbound/svnt_msg.go](/vm/project/github/clash-meta/mihomo/adapter/outbound/svnt_msg.go)
+- [adapter/outbound/svnt_crypto.go](/vm/project/github/clash-meta/mihomo/adapter/outbound/svnt_crypto.go)
+
+当前实际支持范围与本文第一阶段定义一致：
+
+- 仅 `TCP`
+- 仅 `MSG_TYPE_TUNNEL`
+- 仅 `encrypt: 0`
+- `key-data` 必填，并按 `svnt/crypto/crypto.go` 推导 `Auth`
+- `policy-id` 默认 `*`
+- `instance-id` 默认 `mihomo`
+- 不支持 `UDP`
+- 不支持 `WebSocket`
+
 这里的目标是：
 
 - 在 mihomo 的 `proxies:` 中新增 `type: svnt`
