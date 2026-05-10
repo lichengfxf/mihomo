@@ -3,7 +3,7 @@
   <br>Meta Kernel<br>
 </h1>
 
-<h3 align="center">Another Mihomo Kernel.</h3>
+<h3 align="center">另一个 Mihomo 内核。</h3>
 
 <p align="center">
   <a href="https://goreportcard.com/report/github.com/MetaCubeX/mihomo">
@@ -18,36 +18,35 @@
   </a>
 </p>
 
-## Features
+## 功能特性
 
-- Local HTTP/HTTPS/SOCKS server with authentication support
-- VMess, VLESS, Shadowsocks, Trojan, Snell, TUIC, Hysteria, SVNT protocol support
-- Built-in DNS server that aims to minimize DNS pollution attack impact, supports DoH/DoT upstream and fake IP.
-- Rules based off domains, GEOIP, IPCIDR or Process to forward packets to different nodes
-- Remote groups allow users to implement powerful rules. Supports automatic fallback, load balancing or auto select node
-  based off latency
-- Remote providers, allowing users to get node lists remotely instead of hard-coding in config
-- Netfilter TCP redirecting. Deploy Mihomo on your Internet gateway with `iptables`.
-- Comprehensive HTTP RESTful API controller
+- 支持带认证的本地 HTTP/HTTPS/SOCKS 服务器
+- 支持 VMess、VLESS、Shadowsocks、Trojan、Snell、TUIC、Hysteria、SVNT 协议
+- 内置 DNS 服务器，尽可能降低 DNS 污染攻击的影响，支持 DoH/DoT 上游与 Fake IP
+- 支持基于域名、GEOIP、IPCIDR 或进程的规则分流，将流量转发到不同节点
+- 支持远程策略组，可按延迟实现自动故障转移、负载均衡或自动选择节点
+- 支持远程 provider，可远程获取节点列表，无需在配置中硬编码
+- 支持 Netfilter TCP 重定向，可通过 `iptables` 将 Mihomo 部署到你的网络网关
+- 提供完整的 HTTP RESTful API 控制接口
 
-## Dashboard
+## 面板
 
-A web dashboard with first-class support for this project has been created; it can be checked out at [metacubexd](https://github.com/MetaCubeX/metacubexd).
+本项目有一个原生适配的 Web 控制面板，可查看 [metacubexd](https://github.com/MetaCubeX/metacubexd)。
 
-## Configration example
+## 配置示例
 
-Configuration example is located at [/docs/config.yaml](https://github.com/MetaCubeX/mihomo/blob/Alpha/docs/config.yaml).
+配置示例位于 [/docs/config.yaml](https://github.com/MetaCubeX/mihomo/blob/Alpha/docs/config.yaml)。
 
-## Docs
+## 文档
 
-Documentation can be found in [mihomo Docs](https://wiki.metacubex.one/).
+项目文档见 [mihomo Docs](https://wiki.metacubex.one/)。
 
-## For development
+## 开发说明
 
-Requirements:
-[Go 1.20 or newer](https://go.dev/dl/)
+环境要求：
+[Go 1.20 或更高版本](https://go.dev/dl/)
 
-Build mihomo:
+构建 mihomo：
 
 ```shell
 git clone https://github.com/MetaCubeX/mihomo.git
@@ -55,37 +54,36 @@ cd mihomo && go mod download
 go build -o sdc-mihomo
 ```
 
-Set go proxy if a connection to GitHub is not possible:
+如果无法连接 GitHub，可先设置 Go 代理：
 
 ```shell
 go env -w GOPROXY=https://goproxy.io,direct
 ```
 
-Build with gvisor tun stack:
+使用 gVisor TUN 栈构建：
 
 ```shell
 go build -tags with_gvisor
 ```
 
-### IPTABLES configuration
+### IPTABLES 配置
 
-Work on Linux OS which supported `iptables`
+适用于支持 `iptables` 的 Linux 系统。
 
 ```yaml
-# Enable the TPROXY listener
+# 启用 TPROXY 监听器
 tproxy-port: 9898
 
 iptables:
-  enable: true # default is false
-  inbound-interface: eth0 # detect the inbound interface, default is 'lo'
+  enable: true # 默认为 false
+  inbound-interface: eth0 # 入站网卡，默认是 'lo'
 ```
 
-## Debugging
+## 调试
 
-Check [wiki](https://wiki.metacubex.one/api/#debug) to get an instruction on using debug
-API.
+可参考 [wiki](https://wiki.metacubex.one/api/#debug) 了解如何使用调试 API。
 
-## Credits
+## 致谢
 
 - [Dreamacro/clash](https://github.com/Dreamacro/clash)
 - [SagerNet/sing-box](https://github.com/SagerNet/sing-box)
@@ -94,8 +92,8 @@ API.
 - [WireGuard/wireguard-go](https://github.com/WireGuard/wireguard-go)
 - [yaling888/clash-plus-pro](https://github.com/yaling888/clash)
 
-## License
+## 许可证
 
-This software is released under the GPL-3.0 license.
+本软件基于 GPL-3.0 许可证发布。
 
-**In addition, any downstream projects not affiliated with `MetaCubeX` shall not contain the word `mihomo` in their names.**
+**另外，任何与 `MetaCubeX` 无关联的下游项目，名称中不得包含 `mihomo` 一词。**

@@ -20,10 +20,10 @@ done
 
 install -m 0755 \
   "$ROOT_DIR/bin/sdc-mihomo-linux-amd64" \
-  "$DEST_DIR/sdc-mihomo-linux-x86_64"
+  "$DEST_DIR/sdc-mihomo-linux.x86_64"
 
 install -m 0755 \
   "$ROOT_DIR/bin/sdc-mihomo-linux-arm64" \
-  "$DEST_DIR/sdc-mihomo-linux-aarch64"
+  "$DEST_DIR/sdc-mihomo-linux.aarch64"
 
 printf 'Copied artifacts to %s\n' "$DEST_DIR"
