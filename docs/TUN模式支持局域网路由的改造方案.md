@@ -93,7 +93,7 @@ sudo ip route add 192.168.100.235 dev Meta
 
 参考：
 
-- [docs/config.yaml](/vm/project/github/clash-meta/mihomo/docs/config.yaml:150)
+- [docs/config/config.yaml](/vm/project/github/clash-meta/mihomo/docs/config/config.yaml:150)
 
 当前配置会被传入 `TunOptions`：
 

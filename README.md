@@ -35,7 +35,7 @@
 
 ## 配置示例
 
-配置示例位于 [/docs/config.yaml](https://github.com/MetaCubeX/mihomo/blob/Alpha/docs/config.yaml)。
+配置示例位于 [/docs/config/config.yaml](https://github.com/MetaCubeX/mihomo/blob/Alpha/docs/config/config.yaml)。
 
 ## 文档
 

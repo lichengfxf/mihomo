@@ -508,7 +508,7 @@ SVNT 支持底层 WebSocket，这在协议说明里已经写明。
 - `constant/adapters.go`
 - `adapter/parser.go`
 - `adapter/outbound/svnt.go`
-- `docs/config.yaml` 增加最小示例
+- `docs/config/config.yaml` 增加最小示例
 
 这是已经定稿并立即执行的第一步。
 

@@ -476,7 +476,7 @@ tun:
 
 文档示例在：
 
-- [docs/config.yaml](/vm/project/github/clash-meta/mihomo/docs/config.yaml:139)
+- [docs/config/config.yaml](/vm/project/github/clash-meta/mihomo/docs/config/config.yaml:139)
 
 注释已经说明其适用条件：
 
@@ -620,7 +620,7 @@ tun:
 
 参考：
 
-- [docs/config.yaml](/vm/project/github/clash-meta/mihomo/docs/config.yaml:137)
+- [docs/config/config.yaml](/vm/project/github/clash-meta/mihomo/docs/config/config.yaml:137)
 
 ## 22. 实际配置建议
 
