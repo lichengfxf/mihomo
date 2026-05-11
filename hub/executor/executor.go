@@ -86,6 +86,15 @@ func ApplyConfig(cfg *config.Config, force bool) {
 	mux.Lock()
 	defer mux.Unlock()
 	log.SetLevel(cfg.General.LogLevel)
+	log.ApplyFileConfig(log.FileConfig{
+		Path:       cfg.General.LogFile,
+		Format:     cfg.General.LogFileFormat,
+		Append:     cfg.General.LogFileAppend,
+		MaxSize:    cfg.General.LogFileMaxSize,
+		MaxBackups: cfg.General.LogFileMaxBackups,
+		MaxAge:     cfg.General.LogFileMaxAge,
+		Compress:   cfg.General.LogFileCompress,
+	})
 
 	tunnel.OnSuspend()
 
@@ -154,12 +163,19 @@ func GetGeneral() *config.General {
 			InboundTfo:        inbound.Tfo(),
 			InboundMPTCP:      inbound.MPTCP(),
 		},
-		Mode:         tunnel.Mode(),
-		UnifiedDelay: adapter.UnifiedDelay.Load(),
-		LogLevel:     log.Level(),
-		IPv6:         !resolver.DisableIPv6,
-		Interface:    dialer.DefaultInterface.Load(),
-		RoutingMark:  int(dialer.DefaultRoutingMark.Load()),
+		Mode:              tunnel.Mode(),
+		UnifiedDelay:      adapter.UnifiedDelay.Load(),
+		LogLevel:          log.Level(),
+		LogFile:           log.DefaultFileConfig().Path,
+		LogFileFormat:     log.DefaultFileConfig().Format,
+		LogFileAppend:     true,
+		LogFileMaxSize:    log.DefaultFileConfig().MaxSize,
+		LogFileMaxBackups: log.DefaultFileConfig().MaxBackups,
+		LogFileMaxAge:     log.DefaultFileConfig().MaxAge,
+		LogFileCompress:   log.DefaultFileConfig().Compress,
+		IPv6:              !resolver.DisableIPv6,
+		Interface:         dialer.DefaultInterface.Load(),
+		RoutingMark:       int(dialer.DefaultRoutingMark.Load()),
 		GeoXUrl: config.GeoXUrl{
 			GeoIp:   geodata.GeoIpUrl(),
 			Mmdb:    geodata.MmdbUrl(),
@@ -180,6 +196,16 @@ func GetGeneral() *config.General {
 		KeepAliveInterval:       int(keepalive.KeepAliveInterval() / time.Second),
 		KeepAliveIdle:           int(keepalive.KeepAliveIdle() / time.Second),
 		DisableKeepAlive:        keepalive.DisableKeepAlive(),
+	}
+
+	if cfg := log.FileOutputConfig(); cfg != nil {
+		general.LogFile = cfg.Path
+		general.LogFileFormat = cfg.Format
+		general.LogFileAppend = cfg.Append
+		general.LogFileMaxSize = cfg.MaxSize
+		general.LogFileMaxBackups = cfg.MaxBackups
+		general.LogFileMaxAge = cfg.MaxAge
+		general.LogFileCompress = cfg.Compress
 	}
 
 	return general

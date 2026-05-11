@@ -42,6 +42,13 @@ geo-update-interval: 24 # 更新间隔，单位：小时
 # geosite-matcher: succinct
 
 log-level: debug # 日志等级 silent/error/warning/info/debug
+log-file: /var/log/sdc-mihomo/mihomo.log # 留空字符串 "" 可关闭文件日志输出
+log-file-format: text # 第一版仅支持 text
+log-file-append: true # 是否以追加模式写入
+log-file-max-size: 20 # 单个日志文件最大大小，单位 MB
+log-file-max-backups: 5 # 保留的历史日志文件数量
+log-file-max-age: 7 # 历史日志文件最大保留天数
+log-file-compress: true # 是否压缩历史日志文件
 
 ipv6: true # 开启 IPv6 总开关，关闭阻断所有 IPv6 链接和屏蔽 DNS 请求 AAAA 记录
 

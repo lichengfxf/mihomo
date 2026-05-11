@@ -52,6 +52,13 @@ type configSchema struct {
 	BindAddress       *string                  `json:"bind-address"`
 	Mode              *tunnel.TunnelMode       `json:"mode"`
 	LogLevel          *log.LogLevel            `json:"log-level"`
+	LogFile           *string                  `json:"log-file"`
+	LogFileFormat     *string                  `json:"log-file-format"`
+	LogFileAppend     *bool                    `json:"log-file-append"`
+	LogFileMaxSize    *int                     `json:"log-file-max-size"`
+	LogFileMaxBackups *int                     `json:"log-file-max-backups"`
+	LogFileMaxAge     *int                     `json:"log-file-max-age"`
+	LogFileCompress   *bool                    `json:"log-file-compress"`
 	IPv6              *bool                    `json:"ipv6"`
 	Sniffing          *bool                    `json:"sniffing"`
 	TcpConcurrent     *bool                    `json:"tcp-concurrent"`
@@ -375,6 +382,42 @@ func patchConfigs(w http.ResponseWriter, r *http.Request) {
 
 	if general.LogLevel != nil {
 		log.SetLevel(*general.LogLevel)
+	}
+
+	if general.LogFile != nil || general.LogFileFormat != nil || general.LogFileAppend != nil ||
+		general.LogFileMaxSize != nil || general.LogFileMaxBackups != nil ||
+		general.LogFileMaxAge != nil || general.LogFileCompress != nil {
+		current := log.DefaultFileConfig()
+		if cfg := log.FileOutputConfig(); cfg != nil {
+			current = *cfg
+		}
+		if general.LogFile != nil {
+			current.Path = *general.LogFile
+		}
+		if general.LogFileFormat != nil {
+			current.Format = *general.LogFileFormat
+		}
+		if general.LogFileAppend != nil {
+			current.Append = *general.LogFileAppend
+		}
+		if general.LogFileMaxSize != nil {
+			current.MaxSize = *general.LogFileMaxSize
+		}
+		if general.LogFileMaxBackups != nil {
+			current.MaxBackups = *general.LogFileMaxBackups
+		}
+		if general.LogFileMaxAge != nil {
+			current.MaxAge = *general.LogFileMaxAge
+		}
+		if general.LogFileCompress != nil {
+			current.Compress = *general.LogFileCompress
+		}
+		if err := log.ValidateFileConfig(current); err != nil {
+			render.Status(r, http.StatusBadRequest)
+			render.JSON(w, r, newError(err.Error()))
+			return
+		}
+		log.ApplyFileConfig(current)
 	}
 
 	if general.IPv6 != nil {

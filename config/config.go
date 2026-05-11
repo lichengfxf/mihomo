@@ -48,6 +48,13 @@ type General struct {
 	Mode                    T.TunnelMode            `json:"mode"`
 	UnifiedDelay            bool                    `json:"unified-delay"`
 	LogLevel                log.LogLevel            `json:"log-level"`
+	LogFile                 string                  `json:"log-file"`
+	LogFileFormat           string                  `json:"log-file-format"`
+	LogFileAppend           bool                    `json:"log-file-append"`
+	LogFileMaxSize          int                     `json:"log-file-max-size"`
+	LogFileMaxBackups       int                     `json:"log-file-max-backups"`
+	LogFileMaxAge           int                     `json:"log-file-max-age"`
+	LogFileCompress         bool                    `json:"log-file-compress"`
 	IPv6                    bool                    `json:"ipv6"`
 	Interface               string                  `json:"interface-name"`
 	RoutingMark             int                     `json:"routing-mark"`
@@ -408,6 +415,13 @@ type RawConfig struct {
 	Mode                    T.TunnelMode            `yaml:"mode" json:"mode"`
 	UnifiedDelay            bool                    `yaml:"unified-delay" json:"unified-delay"`
 	LogLevel                log.LogLevel            `yaml:"log-level" json:"log-level"`
+	LogFile                 string                  `yaml:"log-file" json:"log-file"`
+	LogFileFormat           string                  `yaml:"log-file-format" json:"log-file-format"`
+	LogFileAppend           bool                    `yaml:"log-file-append" json:"log-file-append"`
+	LogFileMaxSize          int                     `yaml:"log-file-max-size" json:"log-file-max-size"`
+	LogFileMaxBackups       int                     `yaml:"log-file-max-backups" json:"log-file-max-backups"`
+	LogFileMaxAge           int                     `yaml:"log-file-max-age" json:"log-file-max-age"`
+	LogFileCompress         bool                    `yaml:"log-file-compress" json:"log-file-compress"`
 	IPv6                    bool                    `yaml:"ipv6" json:"ipv6"`
 	ExternalController      string                  `yaml:"external-controller" json:"external-controller"`
 	ExternalControllerPipe  string                  `yaml:"external-controller-pipe" json:"external-controller-pipe"`
@@ -482,6 +496,13 @@ func DefaultRawConfig() *RawConfig {
 		UnifiedDelay:      false,
 		Authentication:    []string{},
 		LogLevel:          log.INFO,
+		LogFile:           log.DefaultFileConfig().Path,
+		LogFileFormat:     log.DefaultFileConfig().Format,
+		LogFileAppend:     log.DefaultFileConfig().Append,
+		LogFileMaxSize:    log.DefaultFileConfig().MaxSize,
+		LogFileMaxBackups: log.DefaultFileConfig().MaxBackups,
+		LogFileMaxAge:     log.DefaultFileConfig().MaxAge,
+		LogFileCompress:   log.DefaultFileConfig().Compress,
 		Hosts:             map[string]any{},
 		Rule:              []string{},
 		Proxy:             []map[string]any{},
@@ -739,6 +760,22 @@ func ParseRawConfig(rawCfg *RawConfig) (*Config, error) {
 func temporaryUpdateGeneral(general *General) func()
 
 func parseGeneral(cfg *RawConfig) (*General, error) {
+	if cfg.LogFileFormat == "" {
+		cfg.LogFileFormat = log.DefaultFileConfig().Format
+	}
+	if cfg.LogFileFormat != log.DefaultFileConfig().Format {
+		return nil, fmt.Errorf("unsupported log-file-format: %s", cfg.LogFileFormat)
+	}
+	if cfg.LogFileMaxSize <= 0 {
+		return nil, errors.New("log-file-max-size must be greater than 0")
+	}
+	if cfg.LogFileMaxBackups < 0 {
+		return nil, errors.New("log-file-max-backups must be greater than or equal to 0")
+	}
+	if cfg.LogFileMaxAge < 0 {
+		return nil, errors.New("log-file-max-age must be greater than or equal to 0")
+	}
+
 	return &General{
 		Inbound: Inbound{
 			Port:              cfg.Port,
@@ -756,12 +793,19 @@ func parseGeneral(cfg *RawConfig) (*General, error) {
 			InboundTfo:        cfg.InboundTfo,
 			InboundMPTCP:      cfg.InboundMPTCP,
 		},
-		UnifiedDelay: cfg.UnifiedDelay,
-		Mode:         cfg.Mode,
-		LogLevel:     cfg.LogLevel,
-		IPv6:         cfg.IPv6,
-		Interface:    cfg.Interface,
-		RoutingMark:  cfg.RoutingMark,
+		UnifiedDelay:      cfg.UnifiedDelay,
+		Mode:              cfg.Mode,
+		LogLevel:          cfg.LogLevel,
+		LogFile:           cfg.LogFile,
+		LogFileFormat:     cfg.LogFileFormat,
+		LogFileAppend:     cfg.LogFileAppend,
+		LogFileMaxSize:    cfg.LogFileMaxSize,
+		LogFileMaxBackups: cfg.LogFileMaxBackups,
+		LogFileMaxAge:     cfg.LogFileMaxAge,
+		LogFileCompress:   cfg.LogFileCompress,
+		IPv6:              cfg.IPv6,
+		Interface:         cfg.Interface,
+		RoutingMark:       cfg.RoutingMark,
 		GeoXUrl: GeoXUrl{
 			GeoIp:   cfg.GeoXUrl.GeoIp,
 			Mmdb:    cfg.GeoXUrl.Mmdb,

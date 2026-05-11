@@ -4,6 +4,13 @@
 mixed-port: 7890
 
 log-level: info
+log-file: /var/log/sdc-mihomo/mihomo.log
+log-file-format: text
+log-file-append: true
+log-file-max-size: 20
+log-file-max-backups: 5
+log-file-max-age: 7
+log-file-compress: true
 mode: rule
 
 tproxy-port: 7893
