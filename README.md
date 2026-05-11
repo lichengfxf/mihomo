@@ -41,7 +41,7 @@
 
 项目文档见 [mihomo Docs](https://wiki.metacubex.one/)。
 
-仓库内补充设计文档位于 [docs/](/vm/project/github/clash-meta/mihomo/docs)，其中日志系统说明见 [docs/日志系统](/vm/project/github/clash-meta/mihomo/docs/日志系统:1)。
+仓库内补充设计文档位于 [docs/](/vm/project/github/clash-meta/mihomo/docs)，其中日志系统说明见 [docs/日志系统](/vm/project/github/clash-meta/mihomo/docs/日志系统:1)，配置示例已包含 `log-file` 等文件日志字段。
 
 ## 开发说明
 
